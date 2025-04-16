@@ -1,5 +1,5 @@
 import { Duration } from '@/lib/duration'
-import { getModelClient, getDefaultMode } from '@/lib/models'
+import { getModelClient } from '@/lib/models'
 import { LLMModel, LLMModelConfig } from '@/lib/models'
 import { toPrompt } from '@/lib/prompt'
 import ratelimit from '@/lib/ratelimit'
@@ -20,19 +20,25 @@ export async function POST(req: Request) {
   const {
     messages,
     userID,
+    teamID,
     template,
     model,
     config,
   }: {
     messages: CoreMessage[]
-    userID: string
+    userID: string | undefined
+    teamID: string | undefined
     template: Templates
     model: LLMModel
     config: LLMModelConfig
   } = await req.json()
 
   const limit = !config.apiKey
-    ? await ratelimit(req.headers.get("x-forwarded-for"), rateLimitMaxRequests, ratelimitWindow)
+    ? await ratelimit(
+        req.headers.get('x-forwarded-for'),
+        rateLimitMaxRequests,
+        ratelimitWindow,
+      )
     : false
 
   if (limit) {
@@ -47,6 +53,7 @@ export async function POST(req: Request) {
   }
 
   console.log('userID', userID)
+  console.log('teamID', teamID)
   // console.log('template', template)
   console.log('model', model)
   // console.log('config', config)
@@ -60,7 +67,6 @@ export async function POST(req: Request) {
       schema,
       system: toPrompt(template),
       messages,
-      mode: getDefaultMode(model),
       maxRetries: 0, // do not retry on errors
       ...modelParams,
     })
